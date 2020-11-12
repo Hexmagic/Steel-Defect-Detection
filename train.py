@@ -36,7 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--group', type=int, default=16, help="Unet groups")
     parser.add_argument('--lr', type=float, default=1e-3, help='defalut lr')
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--checkpooint',type=str,default='weights')
+    parser.add_argument('--checkpoint',type=str,default='weights')
     parser.add_argument('--decoder',
                         type=str,
                         default='unet',
