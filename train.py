@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 import pytorch_lightning as pl
 from util.loss import DiceLoss
 from model.model import Model
-from pytorch_lightning.callbacks import ModelCheckpoint, callbacks
+from pytorch_lightning.callbacks import ModelCheckpoint
 import torch.nn as nn
 
 
