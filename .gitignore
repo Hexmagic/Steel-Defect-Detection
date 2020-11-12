@@ -11,6 +11,7 @@ weights/*
 out.txt
 .vscode
 run
+*.ckpt
 .idea
 # Distribution / packaging
 .Python

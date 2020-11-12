@@ -6,7 +6,7 @@ import os
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from util.loss import DiceLoss
-from model.model import Model
+from model.model import Model, ClsModel
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch.nn as nn
 
@@ -36,7 +36,8 @@ if __name__ == '__main__':
     parser.add_argument('--group', type=int, default=16, help="Unet groups")
     parser.add_argument('--lr', type=float, default=1e-3, help='defalut lr')
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--checkpoint',type=str,default='weights')
+    parser.add_argument('--mode', type=str, default='seg', help='seg or cls')
+    parser.add_argument('--checkpoint', type=str, default='weights')
     parser.add_argument('--decoder',
                         type=str,
                         default='unet',
@@ -57,23 +58,32 @@ if __name__ == '__main__':
         bce_loss = bce(y_pred, y)
         dice_loss = dice(y_pred, y)
         return 0.6 * bce_loss + 0.4 * dice_loss
-
-    checkpoint = ModelCheckpoint(
-        dirpath=arg.checkpoint, verbose=True, mode='max', monitor='iou',filename=f'{arg.encoder}_{arg.decoder}')
-    model = Model(criterion=seg_criterion,
-                  encoder=arg.encoder,
-                  decoder=arg.decoder)
+    if arg.mode == 'seg':
+        checkpoint = ModelCheckpoint(
+            dirpath=arg.checkpoint, verbose=True, mode='max', monitor='iou', filename=f'{arg.encoder}_{arg.decoder}')
+        model = Model(criterion=seg_criterion,
+                      encoder=arg.encoder,
+                      decoder=arg.decoder)
+    else:
+        checkpoint = ModelCheckpoint(
+            dirpath=arg.checkpoint, verbose=True, mode='max', monitor='acc', filename=f'{arg.encoder}')
+        model = ClsModel(
+            batch_size=arg.batch_size,
+            criterion=nn.BCELoss(),
+            encoder=arg.encoder
+        )
     train_loader, val_loader = create_dataloader(arg)
     trainer = pl.Trainer(gpus=1,
-                        log_gpu_memory=True,
-                        callbacks=[checkpoint],
-                        benchmark=True,
-                        accumulate_grad_batches=5,
-                        auto_scale_batch_size='binsearch',
-                        max_epochs=arg.epochs,
-                        val_check_interval=0.5)
+                         log_gpu_memory=True,
+                         callbacks=[checkpoint],
+                         benchmark=True,
+                         accumulate_grad_batches=5,
+                         max_epochs=arg.epochs,
+                         auto_lr_find=True,
+                         val_check_interval=0.5)
     # log_gpu_memory=True, val_check_interval=0.5)
-    #trainer.tune(model, train_loader, val_loader)
+    if arg.mode == 'cls':
+        trainer.tune(model, train_loader, val_loader)
     trainer.fit(model,
                 train_dataloader=train_loader,
                 val_dataloaders=val_loader)
