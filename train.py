@@ -36,6 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--group', type=int, default=16, help="Unet groups")
     parser.add_argument('--lr', type=float, default=1e-3, help='defalut lr')
     parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--checkpooint',type=str,default='weights')
     parser.add_argument('--decoder',
                         type=str,
                         default='unet',
@@ -58,7 +59,7 @@ if __name__ == '__main__':
         return 0.6 * bce_loss + 0.4 * dice_loss
 
     checkpoint = ModelCheckpoint(
-        filepath='weights', verbose=True, mode='max', monitor='iou')
+        filepath=arg.checkpoint, verbose=True, mode='max', monitor='iou')
     model = Model(criterion=seg_criterion,
                   encoder=arg.encoder,
                   decoder=arg.decoder)
