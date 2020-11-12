@@ -59,7 +59,7 @@ if __name__ == '__main__':
         return 0.6 * bce_loss + 0.4 * dice_loss
 
     checkpoint = ModelCheckpoint(
-        dirpath=arg.checkpoint, verbose=True, mode='max', monitor='iou')
+        dirpath=arg.checkpoint, verbose=True, mode='max', monitor='iou',filename=f'{arg.encoder}_{arg.decoder}')
     model = Model(criterion=seg_criterion,
                   encoder=arg.encoder,
                   decoder=arg.decoder)
