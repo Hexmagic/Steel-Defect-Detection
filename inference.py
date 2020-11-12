@@ -10,16 +10,6 @@ from torchvision.transforms import Compose, Normalize, ToPILImage, ToTensor
 
 from model.model import Model
 
-transform = Compose([
-    ToPILImage(),
-    ToTensor(),
-    Normalize(mean=[0.485, 0.456, 0.406],
-              std=[0.229, 0.224, 0.225])])
-
-threshold = 0.5
-model = Model.load_from_checkpoint('resnet34_fpn-v0.ckpt', decoder='fpn')
-model.eval()
-
 
 def decode(rows):
     '''
@@ -54,7 +44,7 @@ def mask2rle(img):
     return ' '.join(str(x) for x in runs)
 
 
-def create_submission():
+def create_submission(model, arg, transform, threshold):
     '''
 
     :param classify_splits: 分类模型的折数，类型为字典
@@ -72,8 +62,8 @@ def create_submission():
     :return: None
     '''
     # 加载数据集
-    df = pd.read_csv('data/steel/sample_submission.csv')
-    root = 'data/steel/test_images'
+    df = pd.read_csv(arg.scv)
+    root = arg.root
     predictions = []
     for x in os.listdir(root):
         img_id = os.path.join(root, x)
@@ -95,3 +85,24 @@ def create_submission():
     df = pd.DataFrame(predictions, columns=[
                       'ImageId_ClassId', 'EncodedPixels'])
     df.to_csv("submission.csv", index=False)
+
+
+def main():
+    parser = ArgumentParser()
+    parser.add_argument('--csv', type=str)
+    parser.add_argument('--root', type=str)
+    arg = parser.parse_args()
+    transform = Compose([
+        ToPILImage(),
+        ToTensor(),
+        Normalize(mean=[0.485, 0.456, 0.406],
+                  std=[0.229, 0.224, 0.225])])
+
+    threshold = 0.5
+    model = Model.load_from_checkpoint('resnet34_fpn-v0.ckpt', decoder='fpn')
+    model.eval()
+    create_submission(model, arg, transform, threshold)
+
+
+if __name__ == '__main__':
+    main()
