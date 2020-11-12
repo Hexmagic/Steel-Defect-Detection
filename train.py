@@ -1,14 +1,16 @@
-import pandas as pd
-import torch
-from dataset.dataset import SteelData
-from torch.utils.data import DataLoader
 import os
 from argparse import ArgumentParser
+
+import pandas as pd
 import pytorch_lightning as pl
-from util.loss import DiceLoss
-from model.model import Model, ClsModel
-from pytorch_lightning.callbacks import ModelCheckpoint
+import torch
 import torch.nn as nn
+from pytorch_lightning.callbacks import ModelCheckpoint
+from torch.utils.data import DataLoader
+
+from dataset.dataset import SteelData
+from model.model import ClsModel, Model
+from util.loss import DiceLoss
 
 
 def create_dataloader(swarg):
@@ -38,6 +40,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--mode', type=str, default='seg', help='seg or cls')
     parser.add_argument('--checkpoint', type=str, default='weights')
+    parser.add_argument('--tpu',action='store_true')
     parser.add_argument('--decoder',
                         type=str,
                         default='unet',
@@ -73,14 +76,22 @@ if __name__ == '__main__':
             encoder=arg.encoder
         )
     train_loader, val_loader = create_dataloader(arg)
-    trainer = pl.Trainer(gpus=1,
+
+    param = {
+        'gpus':1
+    }
+    if arg.tpu:
+        param = {
+            'tpu_cores':8
+        }
+    trainer = pl.Trainer(
                          log_gpu_memory=True,
                          callbacks=[checkpoint],
                          benchmark=True,
                          accumulate_grad_batches=5,
                          max_epochs=arg.epochs,
                          auto_lr_find=True,
-                         val_check_interval=0.5)
+                         val_check_interval=0.5,**param)
     # log_gpu_memory=True, val_check_interval=0.5)
     if arg.mode == 'cls':
         trainer.tune(model, train_loader, val_loader)
