@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 import pytorch_lightning as pl
 from util.loss import DiceLoss
 from model.model import Model
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, callbacks
 import torch.nn as nn
 
 
@@ -66,6 +66,7 @@ if __name__ == '__main__':
     train_loader, val_loader = create_dataloader(arg)
     trainer = pl.Trainer(gpus=1,
                         log_gpu_memory=True,
+                        callbacks=[checkpoint],
                         benchmark=True,
                         accumulate_grad_batches=5,
                         auto_scale_batch_size='binsearch',
