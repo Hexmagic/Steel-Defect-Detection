@@ -59,18 +59,18 @@ if __name__ == '__main__':
         return 0.6 * bce_loss + 0.4 * dice_loss
 
     checkpoint = ModelCheckpoint(
-        filepath=arg.checkpoint, verbose=True, mode='max', monitor='iou')
+        dirpath=arg.checkpoint, verbose=True, mode='max', monitor='iou')
     model = Model(criterion=seg_criterion,
                   encoder=arg.encoder,
                   decoder=arg.decoder)
     train_loader, val_loader = create_dataloader(arg)
     trainer = pl.Trainer(gpus=1,
-                         log_gpu_memory=True,
-                         benchmark=True,
-                         accumulate_grad_batches=5,
-                         auto_scale_batch_size='binsearch',
-                         max_epochs=arg.epochs,
-                         val_check_interval=0.5)
+                        log_gpu_memory=True,
+                        benchmark=True,
+                        accumulate_grad_batches=5,
+                        auto_scale_batch_size='binsearch',
+                        max_epochs=arg.epochs,
+                        val_check_interval=0.5)
     # log_gpu_memory=True, val_check_interval=0.5)
     #trainer.tune(model, train_loader, val_loader)
     trainer.fit(model,
