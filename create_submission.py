@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torchvision.transforms import Compose, Normalize, ToPILImage, ToTensor
-
+from tqdm import tqdm
 from model.model import Model
 
 
@@ -44,7 +44,7 @@ def mask2rle(img):
     return ' '.join(str(x) for x in runs)
 
 
-def create_submission(model, arg, transform, threshold):
+def create_submission(model, csv, root, transform, threshold):
     '''
 
     :param classify_splits: 分类模型的折数，类型为字典
@@ -62,36 +62,31 @@ def create_submission(model, arg, transform, threshold):
     :return: None
     '''
     # 加载数据集
-    df = pd.read_csv(arg.scv)
-    root = arg.root
+    df = pd.read_csv(csv)
     predictions = []
-    for x in os.listdir(root):
+    for x in tqdm(os.listdir(root)):
         img_id = os.path.join(root, x)
         imgId = img_id.split(os.sep)[-1]
         img = cv2.imread(img_id)
         left = img[:, :800, :]
         right = img[:, 800:, :]
-        left = transform(left).unsqueeze(0)
-        right = transform(right).unsqueeze(0)
+        left = transform(left).unsqueeze(0).to('cuda')
+        right = transform(right).unsqueeze(0).to('cuda')
         left_out = torch.sigmoid(model(left))
         right_out = torch.sigmoid(model(right))
-        left_out[left_out > threshold] = 1
-        right_out[right_out > threshold] = 1
-        left_mask = torch.argmax(left_out, dim=1)
-        right_mask = torch.argmax(right_out, dim=1)
-        mask = torch.cat([left_mask, right_mask], dim=-1)
-        rle = mask2rle(mask)
-        predictions.append([imgId, rle])
+        left_out = (left_out > threshold).type(torch.float)
+        right_out = (right_out > threshold).type(torch.float)
+        masks = torch.cat([left_out, right_out], dim=-1)
+        for i in range(1, 5):
+            mask = masks[0, i]
+            rle = mask2rle(mask.detach().cpu().numpy())
+            predictions.append([imgId, rle, i])
     df = pd.DataFrame(predictions, columns=[
-                      'ImageId_ClassId', 'EncodedPixels'])
+                      'ImageId', 'EncodedPixels','ClassId'])
     df.to_csv("submission.csv", index=False)
 
 
 def main():
-    parser = ArgumentParser()
-    parser.add_argument('--csv', type=str)
-    parser.add_argument('--root', type=str)
-    arg = parser.parse_args()
     transform = Compose([
         ToPILImage(),
         ToTensor(),
@@ -100,8 +95,10 @@ def main():
 
     threshold = 0.5
     model = Model.load_from_checkpoint('resnet34_fpn-v0.ckpt', decoder='fpn')
+    model.to('cuda')
     model.eval()
-    create_submission(model, arg, transform, threshold)
+    create_submission(model, 'data/steel/sample_submission.csv',
+                      'data/steel/test_images', transform, threshold)
 
 
 if __name__ == '__main__':
